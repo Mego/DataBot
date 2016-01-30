@@ -3,7 +3,7 @@
 # Add necessary import to this file, including:
 # from Module import Command
 from Module import Command
-import urllib.parse, requests
+import urllib.parse, requests, re
 
 # import SaveIO # For if you want to save and load objects for this module.
 # save_subdir = '<subdir_name>' # Define a save subdirectory for this Module, must be unique in the project. If this is not set, saves and loads will fail.
@@ -34,10 +34,15 @@ def cmd_eval(cmd, bot, args, msg, event):
     if len(args) < 2:
         return "Syntax: !eval <language name> <code>: Error: not enough arguments: got {}".format(args)
     lang = args[0]
-    code = args[1]
+    code = ''
     cinput = ''
-    if len(args) > 2:
-        cinput = args[3]
+    av = ' '.join(args[1:]).replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
+    res = re.findall(r'"([^"]*)"', av)
+    print(res)
+    if res:
+        code = res[0].replace('\ufff7', '"').replace("\uffff", "'")
+        cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'") if len(res)>1 else ''
+    print(code, cinput)
     url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
     req = "code={}&input={}&debug=on".format(urllib.parse.quote(code, encoding='utf-8'), urllib.parse.quote(cinput))
     try:
