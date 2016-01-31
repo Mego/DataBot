@@ -30,21 +30,18 @@ import urllib.parse, requests, re
 # ...
 
 def cmd_eval(cmd, bot, args, msg, event):
-    print(args)
     if len(args) < 2:
-        return "Syntax: !eval <language name> <code>: Error: not enough arguments: got {}".format(args)
+        return 'Syntax: !eval <language name> "<code>" "[input]": Error: not enough arguments: got {}'.format(args)
     lang = args[0]
     code = ''
     cinput = ''
-    av = ' '.join(args[1:]).replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
+    av = ' '.join(args[1:]).replace(r'\\', '\ufff8').replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
     res = re.findall(r'"([^"]*)"', av)
-    print(res)
     if res:
-        code = res[0].replace('\ufff7', '"').replace("\uffff", "'")
-        cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'") if len(res)>1 else ''
-    print(code, cinput)
+        code = res[0].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\')
+        cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\') if len(res)>1 else ''
     url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
-    req = "code={}&input={}&debug=on".format(urllib.parse.quote(code, encoding='utf-8'), urllib.parse.quote(cinput))
+    req = "code={}&input={}&debug=on".format(urllib.parse.quote(code, encoding='utf-8'), urllib.parse.quote(cinput, encoding='utf-8'))
     try:
         return requests.post(url, data=req).text[33:]
     except:
@@ -52,7 +49,7 @@ def cmd_eval(cmd, bot, args, msg, event):
 
 
 commands = [  # A list of all Commands in this Module.
-    Command('eval', cmd_eval, 'runs code'),
+    Command('eval', cmd_eval, 'runs code', allowed_chars=None),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # ...

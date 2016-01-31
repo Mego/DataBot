@@ -26,3 +26,7 @@
         Conor O'Brien       (@CᴏɴᴏʀO'Bʀɪᴇɴ)         https://github.com/ConorOBrien-Foxx
         VTCAKAVSMoACE       (@FlagAsSpam)           https://github.com/VTCAKAVSMoACE
              schas002       (@zyabin101)            https://github.com/schas002
+             
+    Note to Devs: to kill all instances of Data, use:
+        killall python3
+    That should do the trick.

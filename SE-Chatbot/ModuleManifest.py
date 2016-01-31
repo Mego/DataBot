@@ -1,5 +1,9 @@
 module_file_names = [
-    'botbuiltins.meta',
+    'botbuiltins.module_controls',
+    'botbuiltins.admin',
+    'botbuiltins.nesting',
+    'botbuiltins.parameters',
+    'botbuiltins.utils',
     'EvalModule',
 ]
 
