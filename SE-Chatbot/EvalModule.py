@@ -56,7 +56,7 @@ def cmd_eval(cmd, bot, args, msg, event):
     if res:
         code = res[0].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\')
         cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\') if len(res)>1 else ''
-        cargs = "+".join(res[2:])
+        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a.encode('latin-1').decode('utf-8'), safe="'/"), res[2:]))) if len(res)>2 else ''
     print(code, cinput, cargs)
     if lang == 'pyth':
         process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
@@ -72,9 +72,12 @@ def cmd_eval(cmd, bot, args, msg, event):
     else:
         url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
         #req = "code={}&input={}&args={}&debug=on".format(code, cinput, cargs)
-        req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code.encode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('utf-8'), safe="'/"), cargs)
+        if cargs:
+          req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code.encode('latin-1').decode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('latin-1').decode('utf-8'), safe="'/"), cargs)
+        else:
+          req = "code={}&input={}&debug=on".format(urllib.parse.quote(code.encode('latin-1').decode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('latin-1').decode('utf-8'), safe="'/"))
         try:
-            result = requests.post(url, data=req).text[33:]
+            result = requests.post(url, data=req).text[33:] # maybe find a way to figure out if there was a timeout on TIO
         except:
             return "Something went wrong with your request, sorry! Are you sure that language is on Try It Online?"
             
