@@ -9,9 +9,9 @@
     This is the workspace for the databot, a chatbot for evaluating any
     code that is runnable on tryitonline.net. For more information, see:
         http://chat.stackexchange.com/rooms/35039/ppcg-code-snippet-chat-bot
-    For access, reload the page and hit "Request Access". We'll get to you as
-    soon as we can. (Post something in that chat room as well so we know who you
-    are.)
+    For access, request access on the workspace listed there. We'll get to you
+    as soon as we can. (Post something in that chat room as well so we know who
+    you are.)
     
     This is using ProgramFOX's base for SE Chatbots. The original repository is:
          https://github.com/ProgramFOX/SE-Chatbot

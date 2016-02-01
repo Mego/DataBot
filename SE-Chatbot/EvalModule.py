@@ -33,15 +33,28 @@ def cmd_eval(cmd, bot, args, msg, event):
     if len(args) < 2:
         return 'Syntax: !eval <language name> "<code>" "[input]": Error: not enough arguments: got {}'.format(args)
     lang = args[0]
+    # http://stackoverflow.com/a/1177542/2508324
+    # args = list(map(lambda x: x.encode('raw_unicode_escape').decode('utf-8'), args))
+    print(args)
+    if lang.lower() == 'python':
+        code = args[1]
+        return eval(code)
     code = ''
     cinput = ''
+    cargs = '+'
+    # args support?
+    #av = ''
     av = ' '.join(args[1:]).replace(r'\\', '\ufff8').replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
     res = re.findall(r'"([^"]*)"', av)
+    print(res)
     if res:
         code = res[0].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\')
         cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\') if len(res)>1 else ''
+        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a, safe="'/"), res[2:])))
+    print(code, cinput, cargs)
     url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
-    req = "code={}&input={}&debug=on".format(urllib.parse.quote(code, encoding='utf-8'), urllib.parse.quote(cinput, encoding='utf-8'))
+    req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code, safe="'/"), urllib.parse.quote(cinput, safe="'/"), cargs)
+    print(req)
     try:
         return requests.post(url, data=req).text[33:]
     except:
