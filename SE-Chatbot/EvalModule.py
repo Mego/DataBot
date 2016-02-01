@@ -72,7 +72,6 @@ def cmd_eval(cmd, bot, args, msg, event):
     else:
         url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
         #req = "code={}&input={}&args={}&debug=on".format(code, cinput, cargs)
-        print(req)
         req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code.encode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('utf-8'), safe="'/"), cargs)
         try:
             result = requests.post(url, data=req).text[33:]
