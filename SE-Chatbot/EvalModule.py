@@ -37,7 +37,7 @@ def on_bot_load(bot):
 
 def cmd_eval(cmd, bot, args, msg, event):
     if len(args) < 2:
-        return 'Syntax: !eval <language name> "<code>" "[input]": Error: not enough arguments: got {}'.format(args)
+        return 'Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...: Error: not enough arguments: got {}'.format(args)
     lang = args[0].lower()
     # http://stackoverflow.com/a/1177542/2508324
     # args = list(map(lambda x: x.encode('raw_unicode_escape').decode('utf-8'), args))
@@ -90,7 +90,7 @@ def sub_eval(bot, msg, url, req):
     return res
 
 commands = [  # A list of all Commands in this Module.
-    Command('eval', cmd_eval, 'runs code', allowed_chars=None),
+    Command('eval', cmd_eval, 'eval:\n\tEvaluates code through http://tryitonline.net backend.\n\tSyntax: Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...', allowed_chars=None),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # ...
