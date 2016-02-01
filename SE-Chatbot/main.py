@@ -6,6 +6,7 @@ from Config import Config
 
 sys.excepthook = uncaught_exception
 install_thread_excepthook()
+install_thread_excepthook()
 bot = Chatbot()
 config_data = {}
 additional_general_config = {}

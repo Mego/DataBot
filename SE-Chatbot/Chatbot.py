@@ -2,6 +2,7 @@ import getpass
 import re
 import logging.handlers
 import sys
+import _thread
 
 from ChatExchange3.chatexchange3.client import Client
 from ChatExchange3.chatexchange3.browser import LoginError
@@ -244,16 +245,18 @@ class Chatbot:
             return
 
         cmd_args = stripped_content[len(self.prefix):]
-        if self.requires_special_arg_parsing(cmd_args.split(" ")[0]):
-            cmd_args = content[len(self.prefix):]
-        output = self.command(cmd_args, message, event)
-        if output is not False and output is not None:
-            output_with_reply = ":%i %s" % (message.id, output)
-            if len(output_with_reply) > 500 and "\n" not in output_with_reply:
-                message.reply("Output would be longer than 500 characters (the limit for single-line messages), so only the first 500 characters are posted now.")
-                self.room.send_message(output_with_reply[:500])
-            else:
-                self.room.send_message(output_with_reply, False)
+        def concurrent_command(self, cmd_args1, message1, event1, content1):
+            if self.requires_special_arg_parsing(cmd_args1.split(" ")[0]):
+                cmd_args1 = event1[len(self.prefix):]
+            output = self.command(cmd_args1, message1, event1)
+            if output is not False and output is not None:
+                output_with_reply = ":%i %s" % (message1.id, output)
+                if len(output_with_reply) > 500 and "\n" not in output_with_reply:
+                    message1.reply("Output would be longer than 500 characters (the limit for single-line messages), so only the first 500 characters are posted now.")
+                    self.room.send_message(output_with_reply[:500])
+                else:
+                    self.room.send_message(output_with_reply, False)
+        _thread.start_new_thread(concurrent_command, (self, cmd_args, message, event, content))
 
     def command(self, cmd, msg, event):
         cmd_args = cmd.split(' ')

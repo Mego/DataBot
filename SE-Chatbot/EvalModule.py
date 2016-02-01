@@ -3,7 +3,7 @@
 # Add necessary import to this file, including:
 # from Module import Command
 from Module import Command
-import urllib.parse, requests, re, multiprocessing
+import urllib.parse, requests, re, subprocess, multiprocessing
 
 # import SaveIO # For if you want to save and load objects for this module.
 # save_subdir = '<subdir_name>' # Define a save subdirectory for this Module, must be unique in the project. If this is not set, saves and loads will fail.
@@ -34,7 +34,6 @@ def on_bot_load(bot):
 # def <command exec name>(cmd, bot, args, msg, event): # cmd refers to the Command you assign this function to
 #     return "I'm in test1"
 #
-# ...
 
 def cmd_eval(cmd, bot, args, msg, event):
     if len(args) < 2:
@@ -50,24 +49,38 @@ def cmd_eval(cmd, bot, args, msg, event):
     code = ''
     cinput = ''
     cargs = '+'
-    # args support?
-    #av = ''
+    result = ""
     av = ' '.join(args[1:]).replace(r'\\', '\ufff8').replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
     res = re.findall(r'"([^"]*)"', av)
     print(res)
     if res:
         code = res[0].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\')
         cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\') if len(res)>1 else ''
-        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a, safe="'/"), res[2:])))
+        cargs = "+".join(res[2:])
     print(code, cinput, cargs)
-    url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
-    req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code, safe="'/"), urllib.parse.quote(cinput, safe="'/"), cargs)
-    print(req)
-    #pool.apply_async(sub_eval, (bot, msg, url, req))
-    try:
-        return requests.post(url, data=req).text[33:]
-    except:
-        return "Something went wrong with your request, sorry! Are you sure that language is on Try It Online?"
+    if lang == 'pyth':
+        process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
+        try:
+            result = process.communicate(input=cinput, timeout=60)[0]
+        except subprocess.TimeoutExpired:
+            process.kill()
+            result = "Sorry, your code took too long to run!"
+            partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
+            if partial_out:
+                result += "\nPartial output:\n" + partial_out
+        # temporary testing unicode hack workaround thing - Mego
+    else:
+        url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
+        #req = "code={}&input={}&args={}&debug=on".format(code, cinput, cargs)
+        print(req)
+        req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code.encode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('utf-8'), safe="'/"), cargs)
+        try:
+            result = requests.post(url, data=req).text[33:]
+        except:
+            return "Something went wrong with your request, sorry! Are you sure that language is on Try It Online?"
+            
+    result = result or "<no output>" # ugly :P CR would disapprove #golfier #pythonic #lelplebian
+    return result
 
 
 def sub_eval(bot, msg, url, req):
