@@ -88,9 +88,13 @@ def cmd_eval(cmd, bot, args, msg, event):
 def sub_eval(bot, msg, url, req):
     res = requests.post(url, data=req).text[33:]
     return res
+    
+def command_version(cmd, bot, args, msg, event):
+    return open("/home/ubuntu/workspace/version").read()
 
 commands = [  # A list of all Commands in this Module.
     Command('eval', cmd_eval, 'eval:\n\tEvaluates code through http://tryitonline.net backend.\n\tSyntax: Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...', allowed_chars=None),
+    Command('version', command_version, "Displays the name and version of the bot. Syntax: `$PREFIXversion", False, False)
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # ...
