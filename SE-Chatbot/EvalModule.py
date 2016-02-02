@@ -3,7 +3,7 @@
 # Add necessary import to this file, including:
 # from Module import Command
 from Module import Command
-import urllib.parse, requests, re, subprocess, multiprocessing, ast
+import urllib.parse, requests, re, subprocess, multiprocessing
 
 # import SaveIO # For if you want to save and load objects for this module.
 # save_subdir = '<subdir_name>' # Define a save subdirectory for this Module, must be unique in the project. If this is not set, saves and loads will fail.
@@ -50,12 +50,13 @@ def cmd_eval(cmd, bot, args, msg, event):
     cinput = ''
     cargs = '+'
     result = ""
-    res = list(map(lambda a:ast.literal_eval("u"+a),args[1:]))
+    av = ' '.join(args[1:]).replace(r'\\', '\ufff8').replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
+    res = re.findall(r'"([^"]*)"', av)
     print(res)
     if res:
-        code = res[0]
-        cinput = res[1] if len(res)>1 else ''
-        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a), res[2:]))) if len(res)>2 else ''
+        code = res[0].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\').replace(r'\n','\n')
+        cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\').replace(r'\n','\n') if len(res)>1 else ''
+        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a.encode('latin-1').decode('utf-8').replace(r'\n','\n'), safe="'/"), res[2:]))) if len(res)>2 else ''
     print(code, cinput, cargs)
     if lang == 'pyth':
         process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
@@ -67,14 +68,14 @@ def cmd_eval(cmd, bot, args, msg, event):
             partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
             if partial_out:
                 result += "\nPartial output:\n" + partial_out
-        except:
-            result = "There was an issue running your code."
+        # temporary testing unicode hack workaround thing - Mego
     else:
         url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
+        #req = "code={}&input={}&args={}&debug=on".format(code, cinput, cargs)
         if cargs:
-          req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code), urllib.parse.quote(cinput), cargs)
+          req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code.encode('latin-1').decode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('latin-1').decode('utf-8'), safe="'/"), cargs)
         else:
-          req = "code={}&input={}&debug=on".format(urllib.parse.quote(code), urllib.parse.quote(cinput))
+          req = "code={}&input={}&debug=on".format(urllib.parse.quote(code.encode('latin-1').decode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('latin-1').decode('utf-8'), safe="'/"))
         try:
             result = requests.post(url, data=req).text[33:] # maybe find a way to figure out if there was a timeout on TIO
         except:
