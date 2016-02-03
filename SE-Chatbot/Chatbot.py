@@ -1,8 +1,8 @@
 import getpass
 import re
 import logging.handlers
-import sys
-import _thread
+import sys, os, signal
+import threading
 
 from ChatExchange3.chatexchange3.client import Client
 from ChatExchange3.chatexchange3.browser import LoginError
@@ -135,10 +135,19 @@ class Chatbot:
         for on_load in on_loads:
             on_load(self)
 
-        self.room.watch_socket(self.on_event)
+        self.room_watcher = self.room.watch_socket(self.on_event)
+        
+        def interrupted(signum,frame):
+            sys.stdout.write('\r')
+            sys.stdout.flush()
+            raise InputTimeout
+        signal.signal(signal.SIGALRM, interrupted)
 
         while self.running:
-            inputted = input("<< ")
+            try:
+                inputted = get_input("<< ")
+            except InputTimeout:
+                continue
             if inputted.strip() == "":
                 continue
             if inputted.startswith("$") and len(inputted) > 2:
@@ -149,6 +158,14 @@ class Chatbot:
                     cmd_handler.reply(command_out)
             else:
                 self.room.send_message(inputted)
+        
+    def die(self):
+        self.bot_stopping()
+        self.enabled = False
+        self.room.leave()
+        self.room_watcher.close()
+        self.client.logout()
+        sys.exit()
 
     def get_duplicate_commands(self):
         checked_cmds = []
@@ -247,7 +264,7 @@ class Chatbot:
         cmd_args = stripped_content[len(self.prefix):]
         def concurrent_command(self, cmd_args1, message1, event1, content1):
             if self.requires_special_arg_parsing(cmd_args1.split(" ")[0]):
-                cmd_args1 = event1[len(self.prefix):]
+                cmd_args1 = content1[len(self.prefix):]
             output = self.command(cmd_args1, message1, event1)
             if output is not False and output is not None:
                 output_with_reply = ":%i %s" % (message1.id, output)
@@ -256,7 +273,8 @@ class Chatbot:
                     self.room.send_message(output_with_reply[:500])
                 else:
                     self.room.send_message(output_with_reply, False)
-        _thread.start_new_thread(concurrent_command, (self, cmd_args, message, event, content))
+        threading.Thread(target=concurrent_command, args=(self, cmd_args, message, event, content)).start()
+        #_thread.start_new_thread(concurrent_command, (self, cmd_args, message, event, content))
 
     def command(self, cmd, msg, event):
         cmd_args = cmd.split(' ')
@@ -277,3 +295,12 @@ class Chatbot:
         on_stops = self.modules.get_on_stop_methods()
         for on_stop in on_stops:
             on_stop(self)
+            
+def get_input(prompt):
+    signal.alarm(10)
+    res = input(prompt)
+    signal.alarm(0)
+    return res
+            
+class InputTimeout(Exception):
+    pass

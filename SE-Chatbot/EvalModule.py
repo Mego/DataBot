@@ -3,7 +3,7 @@
 # Add necessary import to this file, including:
 # from Module import Command
 from Module import Command
-import urllib.parse, requests, re, subprocess, multiprocessing
+import ast, multiprocessing, re, requests, subprocess, tempfile, urllib.parse
 
 # import SaveIO # For if you want to save and load objects for this module.
 # save_subdir = '<subdir_name>' # Define a save subdirectory for this Module, must be unique in the project. If this is not set, saves and loads will fail.
@@ -35,47 +35,77 @@ def on_bot_load(bot):
 #     return "I'm in test1"
 #
 
-def cmd_eval(cmd, bot, args, msg, event):
+def parse_eval(cmd):
+    if cmd.startswith("eval "):
+        index = cmd.index(" ",5)
+        # http://stackoverflow.com/a/249937/2508324
+        return [cmd[5:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:])
+    else:
+        return False
+        
+def run_marbelous(code, cinput):
+    file = N
+    process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/marbelous.py-master/marbelous/marbelous.py", 'code'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
+    
+    try:
+        result = process.communicate(input=cinput, timeout=60)[0]
+    except subprocess.TimeoutExpired:
+        process.kill()
+        result = "Sorry, your code took too long to run!"
+        partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
+        if partial_out:
+            result += "\nPartial output:\n" + partial_out
+    except:
+        result = "There was an issue running your code."
+    return result
+    
+def run_pyth(code, cinput):
+    process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
+    try:
+        result = process.communicate(input=cinput, timeout=60)[0]
+    except subprocess.TimeoutExpired:
+        process.kill()
+        result = "Sorry, your code took too long to run!"
+        partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
+        if partial_out:
+            result += "\nPartial output:\n" + partial_out
+    except:
+        result = "There was an issue running your code."
+    return result
+        
+non_tio_langs = {
+    "pyth":run_pyth,
+    #"marbelous":run_marbelous,
+}
+
+def cmd_eval_debug(cmd, bot, args, msg, event):
+    return cmd_eval(cmd, bot, args, msg, event, debug=True)
+
+def cmd_eval(cmd, bot, args, msg, event, debug=False):
     if len(args) < 2:
         return 'Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...: Error: not enough arguments: got {}'.format(args)
     lang = args[0].lower()
-    # http://stackoverflow.com/a/1177542/2508324
-    # args = list(map(lambda x: x.encode('raw_unicode_escape').decode('utf-8'), args))
     print(args)
-    #if lang.lower() == 'python':
-    #    code = args[1]
-    #    return eval(code)
-    # Causes dangerous code.
     code = ''
     cinput = ''
     cargs = '+'
     result = ""
-    av = ' '.join(args[1:]).replace(r'\\', '\ufff8').replace(r'\"', '\ufff7').replace(r"\'", '\uffff')
-    res = re.findall(r'"([^"]*)"', av)
+    res = list(map(lambda a:ast.literal_eval("u"+a),args[1:]))
     print(res)
     if res:
-        code = res[0].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\').replace(r'\n','\n')
-        cinput = res[1].replace('\ufff7', '"').replace("\uffff", "'").replace('\ufff8', r'\\').replace(r'\n','\n') if len(res)>1 else ''
-        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a.encode('latin-1').decode('utf-8').replace(r'\n','\n'), safe="'/"), res[2:]))) if len(res)>2 else ''
+        code = res[0]
+        cinput = res[1] if len(res)>1 else ''
+        cargs = "+".join(list(map(lambda a : urllib.parse.quote(a), res[2:]))) if len(res)>2 else ''
     print(code, cinput, cargs)
-    if lang == 'pyth':
-        process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
-        try:
-            result = process.communicate(input=cinput, timeout=60)[0]
-        except subprocess.TimeoutExpired:
-            process.kill()
-            result = "Sorry, your code took too long to run!"
-            partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
-            if partial_out:
-                result += "\nPartial output:\n" + partial_out
-        # temporary testing unicode hack workaround thing - Mego
+    if lang in non_tio_langs:
+        result = non_tio_langs[lang](code, cinput)
     else:
         url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
-        #req = "code={}&input={}&args={}&debug=on".format(code, cinput, cargs)
-        if cargs:
-          req = "code={}&input={}&args={}&debug=on".format(urllib.parse.quote(code.encode('latin-1').decode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('latin-1').decode('utf-8'), safe="'/"), cargs)
-        else:
-          req = "code={}&input={}&debug=on".format(urllib.parse.quote(code.encode('latin-1').decode('utf-8'), safe="'/"), urllib.parse.quote(cinput.encode('latin-1').decode('utf-8'), safe="'/"))
+        req = "code={}&input={}".format(urllib.parse.quote(code), urllib.parse.quote(cinput))
+        if debug:
+            req += "&debug=on"
+        if len(args) > 2:
+          req += "&args={}".format(cargs)
         try:
             result = requests.post(url, data=req).text[33:] # maybe find a way to figure out if there was a timeout on TIO
         except:
@@ -88,13 +118,10 @@ def cmd_eval(cmd, bot, args, msg, event):
 def sub_eval(bot, msg, url, req):
     res = requests.post(url, data=req).text[33:]
     return res
-    
-def command_version(cmd, bot, args, msg, event):
-    return open("/home/ubuntu/workspace/version").read()
 
 commands = [  # A list of all Commands in this Module.
-    Command('eval', cmd_eval, 'eval:\n\tEvaluates code through http://tryitonline.net backend.\n\tSyntax: Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...', allowed_chars=None),
-    Command('version', command_version, "Displays the name and version of the bot. Syntax: `$PREFIXversion", False, False)
+    Command('eval', cmd_eval, 'eval:\n\tEvaluates code through http://tryitonline.net backend.\n\tSyntax: Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...', special_arg_parsing = parse_eval, allowed_chars=None),
+    Command('evaldebug', cmd_eval_debug, 'eval:\n\tEvaluates code through http://tryitonline.net backend, with debugging on.\n\tSyntax: Syntax: !evaldebug <language name> "<code>" "[input]" "[args1]" "[args2]"...', special_arg_parsing = parse_eval, allowed_chars=None),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # ...

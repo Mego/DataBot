@@ -9,3 +9,4 @@ client.log.*
 errorLogs.txt
 botdata/
 points.py
+__pycache__/
