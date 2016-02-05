@@ -3,7 +3,7 @@
 # Add necessary import to this file, including:
 # from Module import Command
 from Module import Command
-import ast, multiprocessing, re, requests, subprocess, tempfile, urllib.parse
+import ast, multiprocessing, os, re, requests, subprocess, tempfile, traceback, urllib.parse
 
 # import SaveIO # For if you want to save and load objects for this module.
 # save_subdir = '<subdir_name>' # Define a save subdirectory for this Module, must be unique in the project. If this is not set, saves and loads will fail.
@@ -36,16 +36,47 @@ def on_bot_load(bot):
 #
 
 def parse_eval(cmd):
-    if cmd.startswith("eval "):
-        index = cmd.index(" ",5)
-        # http://stackoverflow.com/a/249937/2508324
-        return [cmd[5:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:])
-    else:
+    try:
+        if cmd.startswith("eval "):
+            index = cmd.index(" ",5)
+            # http://stackoverflow.com/a/249937/2508324
+            return [cmd[5:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:], re.DOTALL)
+        elif cmd.startswith("evaldebug "):
+            index = cmd.index(" ",10)
+            # http://stackoverflow.com/a/249937/2508324
+            return [cmd[10:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:], re.DOTALL)
+        else:
+            return False
+    except:
+        traceback.print_exc()
         return False
         
+#temporary workaround while TIO is bugged
+def run_seriously(code, cinput):
+    cp437table = ''.join(map(chr,range(128))) + u"ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ "
+    if any([x not in cp437table for x in code]):
+        return "Error: non-CP437 characters detected in code."
+    code = ''.join(map(lambda c:"{:02x}".format(c), code.encode('cp437')))
+    process = subprocess.Popen(["python2", "/home/ubuntu/workspace/INTERPRETERS/Seriously/seriously.py", '-i', '-x', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) 
+    try:
+        result, err = process.communicate(input=cinput.encode(), timeout=60)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        result = "Sorry, your code took too long to run!"
+        partial_out, p_err = process.communicate() # communicate returns a tuple first element is stdout second is stderr
+        if partial_out:
+            result += "\nPartial output:\n" + partial_out
+    except:
+        traceback.print_exc()
+        result = "There was an issue running your code."
+    return result.decode('cp437')
+    
+        
 def run_marbelous(code, cinput):
-    file = N
-    process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/marbelous.py-master/marbelous/marbelous.py", 'code'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
+    file = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    file.write(code)
+    file.close()
+    process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/marbelous.py-master/marbelous/marbelous.py", file.name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
     
     try:
         result = process.communicate(input=cinput, timeout=60)[0]
@@ -56,7 +87,9 @@ def run_marbelous(code, cinput):
         if partial_out:
             result += "\nPartial output:\n" + partial_out
     except:
+        traceback.print_exc()
         result = "There was an issue running your code."
+    os.remove(file.name)
     return result
     
 def run_pyth(code, cinput):
@@ -70,12 +103,14 @@ def run_pyth(code, cinput):
         if partial_out:
             result += "\nPartial output:\n" + partial_out
     except:
+        traceback.print_exc()
         result = "There was an issue running your code."
     return result
         
 non_tio_langs = {
     "pyth":run_pyth,
-    #"marbelous":run_marbelous,
+    "marbelous":run_marbelous,
+    "seriously":run_seriously,
 }
 
 def cmd_eval_debug(cmd, bot, args, msg, event):
@@ -90,7 +125,7 @@ def cmd_eval(cmd, bot, args, msg, event, debug=False):
     cinput = ''
     cargs = '+'
     result = ""
-    res = list(map(lambda a:ast.literal_eval("u"+a),args[1:]))
+    res = list(map(lambda a:ast.literal_eval("'''"+a[1:-1].replace(r'\"', '"')+"'''"),args[1:]))
     print(res)
     if res:
         code = res[0]
@@ -109,6 +144,7 @@ def cmd_eval(cmd, bot, args, msg, event, debug=False):
         try:
             result = requests.post(url, data=req).text[33:] # maybe find a way to figure out if there was a timeout on TIO
         except:
+            traceback.print_exc()
             return "Something went wrong with your request, sorry! Are you sure that language is on Try It Online?"
             
     result = result or "<no output>" # ugly :P CR would disapprove #golfier #pythonic #lelplebian

@@ -45,25 +45,25 @@ def command_help(cmd, bot, args, msg, event):
 #    return args[0]
 
 
-#def command_read(cmd, bot, args, msg, event):
-#    if len(args) == 0:
-#       return "No message id/link supplied."
-#    else:
-#        message = []
-#        for msg_id in args:
-#            if msg_id.isdigit():
-#                m_id = int(msg_id)
-#            elif msg_id.split("#")[-1].isdigit():
-#                m_id = int(msg_id.split("#")[-1])
-#            elif msg_id.split("/")[-1].isdigit():
-#                m_id = int(msg_id.split("/")[-1])
-#            else:
-#                return msg_id + " is not a valid message id/link."
-#            try:
-#                message += [re.sub(r'^:[0-9]+ ', '', Message(m_id, bot.client).content_source)]
-#            except HTTPError:
-#                return msg_id + ": message not found."
-#        return ' '.join(message)
+def command_read(cmd, bot, args, msg, event):
+    if len(args) == 0:
+      return "No message id/link supplied."
+    else:
+        message = []
+        for msg_id in args:
+            if msg_id.isdigit():
+                m_id = int(msg_id)
+            elif msg_id.split("#")[-1].isdigit():
+                m_id = int(msg_id.split("#")[-1])
+            elif msg_id.split("/")[-1].isdigit():
+                m_id = int(msg_id.split("/")[-1])
+            else:
+                return msg_id + " is not a valid message id/link."
+            try:
+                message += [re.sub(r'^:[0-9]+ ', '', Message(m_id, bot.client).content_source)]
+            except HTTPError:
+                return msg_id + ": message not found."
+        return ' '.join(message)
 
 
 #def command_getcurrentusers(cmd, bot, args, msg, event):
@@ -89,9 +89,10 @@ def command_help(cmd, bot, args, msg, event):
 commands = [Command('alive', command_alive, "A command to see whether the bot is there. Syntax: `$PREFIXalive`", False, False),
             Command('utc', command_utc, "Shows the current UTC time. Syntax: `$PREFIXutc`", False, False),
             Command('listcommands', command_listcommands, "Returns a list of all commands. Syntax: `$PREFIXlistcommands`", False, False),
-            Command('help', command_help, "Shows information about the chat bot, or about a specific command. Syntax: `$PREFIXhelp [ command ]`", False, False)]
+            Command('help', command_help, "Shows information about the chat bot, or about a specific command. Syntax: `$PREFIXhelp [ command ]`", False, False),
             #Command('cat', command_cat, "Repeats what you said back at you. Syntax: `$PREFIXcat something`", False, False, parse_cat_command, None, None, None),
-            #Command('read', command_read, "Reads a post to you. Syntax: `$PREFIXread [ message_id ] ...`", False, False),
+            Command('read', command_read, "Reads a post to you. Syntax: `$PREFIXread [ message_id ] ...`", False, False),
             #Command('getcurrentusers', command_getcurrentusers, "Shows the current users of a room. Syntax: `$PREFIXgetcurrentusers`", False, False),
             #Command('ping', command_ping, "Pings a list of users for you. Syntax: `$PREFIXping user [...]`", False, False, None, None, None, None)
+    ]
 module_name = "utils"

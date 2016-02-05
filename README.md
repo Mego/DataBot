@@ -24,7 +24,7 @@
     Here:               PPCG:                   GitHub:
               Ryan R.       (@Mego)                 https://github.com/Mego
         Conor O'Brien       (@CᴏɴᴏʀO'Bʀɪᴇɴ)         https://github.com/ConorOBrien-Foxx
-        VTCAKAVSMoACE       (@FlagAsSpam)           https://github.com/VTCAKAVSMoACE
+        VTCAKAVSMoACE       (@VoteToClose)          https://github.com/VTCAKAVSMoACE
              quartata       (@quartata)             https://github.com/quartata
              
     Note to Devs: to kill all instances of Data, use:
