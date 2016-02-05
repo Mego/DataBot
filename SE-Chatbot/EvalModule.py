@@ -3,7 +3,7 @@
 # Add necessary import to this file, including:
 # from Module import Command
 from Module import Command
-import ast, multiprocessing, os, re, requests, subprocess, tempfile, traceback, urllib.parse
+import ast, multiprocessing, os, re, requests, subprocess, tempfile, traceback, urllib.parse, urllib.request
 
 # import SaveIO # For if you want to save and load objects for this module.
 # save_subdir = '<subdir_name>' # Define a save subdirectory for this Module, must be unique in the project. If this is not set, saves and loads will fail.
@@ -154,10 +154,18 @@ def cmd_eval(cmd, bot, args, msg, event, debug=False):
 def sub_eval(bot, msg, url, req):
     res = requests.post(url, data=req).text[33:]
     return res
+    
+def cmd_langs(cmd, bot, args, msg, event):
+    langs = ''
+    with urllib.request.urlopen('http://tryitonline.net') as req:
+        langs = ' '.join(re.findall(r'<li><a href="//(.+).tryitonline.net/">.*</a></li>', req.read().decode()))
+    langs += ' '+ ' '.join([lang for lang in non_tio_langs if lang not in langs])
+    return 'Languages supported: {}'.format(langs.strip())
 
 commands = [  # A list of all Commands in this Module.
     Command('eval', cmd_eval, 'eval:\n\tEvaluates code through http://tryitonline.net backend.\n\tSyntax: Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...', special_arg_parsing = parse_eval, allowed_chars=None),
     Command('evaldebug', cmd_eval_debug, 'eval:\n\tEvaluates code through http://tryitonline.net backend, with debugging on.\n\tSyntax: Syntax: !evaldebug <language name> "<code>" "[input]" "[args1]" "[args2]"...', special_arg_parsing = parse_eval, allowed_chars=None),
+    Command('langs', cmd_langs, 'langs:\n\tOutputs the list of supported languages for the eval command.'),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # Command( '<command name>', <command exec name>, '<help text>' (optional), <needs privilege> (= False), <owner only> (= False), <special arg parsing method>(*) (= None), <aliases> (= None), <allowed chars> (= string.printable), <disallowed chars> (= None) (**) ),
     # ...
