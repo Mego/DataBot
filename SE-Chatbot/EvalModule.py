@@ -156,11 +156,11 @@ def sub_eval(bot, msg, url, req):
     return res
     
 def cmd_langs(cmd, bot, args, msg, event):
-    langs = ''
+    langs = None
     with urllib.request.urlopen('http://tryitonline.net') as req:
-        langs = ' '.join(re.findall(r'<li><a href="//(.+).tryitonline.net/">.*</a></li>', req.read().decode()))
-    langs += ' '+ ' '.join([lang for lang in non_tio_langs if lang not in langs])
-    return 'Languages supported: {}'.format(langs.strip())
+        langs = re.findall(r'<li><a href="//(.+).tryitonline.net/">.*</a></li>', req.read().decode())
+    langs.extend([lang for lang in non_tio_langs if lang not in langs])
+    return 'Languages supported: {}'.format(', '.join(langs).strip())
 
 commands = [  # A list of all Commands in this Module.
     Command('eval', cmd_eval, 'eval:\n\tEvaluates code through http://tryitonline.net backend.\n\tSyntax: Syntax: !eval <language name> "<code>" "[input]" "[args1]" "[args2]"...', special_arg_parsing = parse_eval, allowed_chars=None),
