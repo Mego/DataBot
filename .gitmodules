@@ -1,0 +1,9 @@
+[submodule "marbelous.py"]
+	path = marbelous.py
+	url = https://github.com/marbelous-lang/marbelous.py.git
+[submodule "Seriously"]
+	path = Seriously
+	url = https://github.com/Mego/Seriously.git
+[submodule "pyth"]
+	path = pyth
+	url = https://github.com/isaacg1/pyth.git
