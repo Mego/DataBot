@@ -19,13 +19,6 @@ import ast, multiprocessing, os, re, requests, subprocess, tempfile, traceback, 
 # def on_event(event, client, bot): # This will get called on any event (messages, new user entering the room, etc.)
 #     pass
 
-pool = None
-
-def on_bot_load(bot):
-    pass
-    #global pool
-    #pool = multiprocessing.Pool()
-
 # Logic for the commands goes here.
 #
 # def <command exec name>(cmd, bot, args, msg, event): # cmd refers to the Command you assign this function to
@@ -37,19 +30,29 @@ def on_bot_load(bot):
 
 def parse_eval(cmd):
     try:
-        if cmd.startswith("eval "):
-            index = cmd.index(" ",5)
-            # http://stackoverflow.com/a/249937/2508324
-            return [cmd[5:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:], re.DOTALL)
-        elif cmd.startswith("evaldebug "):
-            index = cmd.index(" ",10)
-            # http://stackoverflow.com/a/249937/2508324
-            return [cmd[10:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:], re.DOTALL)
-        else:
-            return False
+        print(cmd)
+        cmd_name_end = cmd.index(" ")+1
+        index = cmd.index(" ",cmd_name_end)
+        # http://stackoverflow.com/a/249937/2508324
+        return [cmd[cmd_name_end:index]] + re.findall(r'"(?:[^"\\]|\\.)*"', cmd[index+1:], re.DOTALL)
     except:
         traceback.print_exc()
         return False
+        
+def run_subprocess(cinput, invoke, universal_newlines=True, **kwargs):
+    process = subprocess.Popen(invoke, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=universal_newlines, **kwargs) 
+    try:
+        result = process.communicate(input=cinput, timeout=60)[0]
+    except subprocess.TimeoutExpired:
+        process.kill()
+        result = "Sorry, your code took too long to run!"
+        partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
+        if partial_out:
+            result += "\nPartial output:\n" + partial_out
+    except:
+        traceback.print_exc()
+        result = "There was an issue running your code."
+    return result
         
 #temporary workaround while TIO is bugged
 def run_seriously(code, cinput):
@@ -57,60 +60,33 @@ def run_seriously(code, cinput):
     if any([x not in cp437table for x in code]):
         return "Error: non-CP437 characters detected in code."
     code = ''.join(map(lambda c:"{:02x}".format(c), code.encode('cp437')))
-    process = subprocess.Popen(["python2", "/home/ubuntu/workspace/INTERPRETERS/Seriously/seriously.py", '-i', '-x', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) 
-    try:
-        result, err = process.communicate(input=cinput.encode(), timeout=60)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        result = "Sorry, your code took too long to run!"
-        partial_out, p_err = process.communicate() # communicate returns a tuple first element is stdout second is stderr
-        if partial_out:
-            result += "\nPartial output:\n" + partial_out
-    except:
-        traceback.print_exc()
-        result = "There was an issue running your code."
-    return result.decode('cp437')
+    return run_subprocess(cinput.encode(), ["python2", "/home/ubuntu/workspace/INTERPRETERS/Seriously/seriously.py", '-i', '-x', '-c', code], universal_newlines=False).decode('cp437')
     
         
 def run_marbelous(code, cinput):
     file = tempfile.NamedTemporaryFile(mode='w', delete=False)
     file.write(code)
     file.close()
-    process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/marbelous.py-master/marbelous/marbelous.py", file.name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
-    
-    try:
-        result = process.communicate(input=cinput, timeout=60)[0]
-    except subprocess.TimeoutExpired:
-        process.kill()
-        result = "Sorry, your code took too long to run!"
-        partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
-        if partial_out:
-            result += "\nPartial output:\n" + partial_out
-    except:
-        traceback.print_exc()
-        result = "There was an issue running your code."
+    result = run_subprocess(cinput, ["/home/ubuntu/workspace/INTERPRETERS/marbelous.py-master/marbelous/marbelous.py", file.name])
     os.remove(file.name)
     return result
     
 def run_pyth(code, cinput):
-    process = subprocess.Popen(["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True) 
-    try:
-        result = process.communicate(input=cinput, timeout=60)[0]
-    except subprocess.TimeoutExpired:
-        process.kill()
-        result = "Sorry, your code took too long to run!"
-        partial_out = process.communicate()[0] # communicate returns a tuple first element is stdout second is stderr
-        if partial_out:
-            result += "\nPartial output:\n" + partial_out
-    except:
-        traceback.print_exc()
-        result = "There was an issue running your code."
-    return result
+    return run_subprocess(cinput, ["/home/ubuntu/workspace/INTERPRETERS/pyth/pyth.py", '--safe', '-c', code])
+    
+def run_japt(code, cinput):
+    return run_subprocess(None, ["/home/ubuntu/workspace/spidermonkey/js", '/home/ubuntu/workspace/INTERPRETERS/japt.js', code, cinput])
         
 non_tio_langs = {
     "pyth":run_pyth,
     "marbelous":run_marbelous,
     "seriously":run_seriously,
+    "japt":run_japt,
+}
+
+lang_synonyms = {
+    "bf":"brainfuck",
+    "///":"slashes",
 }
 
 def cmd_eval_debug(cmd, bot, args, msg, event):
@@ -125,7 +101,7 @@ def cmd_eval(cmd, bot, args, msg, event, debug=False):
     cinput = ''
     cargs = '+'
     result = ""
-    res = list(map(lambda a:ast.literal_eval("'''"+a[1:-1].replace(r'\"', '"')+"'''"),args[1:]))
+    res = list(map(lambda a:ast.literal_eval(a),args[1:]))
     print(res)
     if res:
         code = res[0]
@@ -135,6 +111,8 @@ def cmd_eval(cmd, bot, args, msg, event, debug=False):
     if lang in non_tio_langs:
         result = non_tio_langs[lang](code, cinput)
     else:
+        if lang in lang_synonyms:
+            lang = lang_synonyms[lang]
         url = "http://{}.tryitonline.net/cgi-bin/backend".format(lang)
         req = "code={}&input={}".format(urllib.parse.quote(code), urllib.parse.quote(cinput))
         if debug:
@@ -180,4 +158,4 @@ commands = [  # A list of all Commands in this Module.
 # If a char is both allowed and disallowed, disallowed has higher importance.
 # If allowed_chars is None, all chars are allowed (unless those specified in disallowed_chars).
 
-# module_name = "<name used to address this module>"
+module_name = "EvalModule"
